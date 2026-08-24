@@ -1,6 +1,7 @@
 package de.lightweb.fernbedienung
 
 import android.app.Application
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.lightweb.fernbedienung.data.AppShortcut
@@ -53,21 +54,27 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     private val _apps = MutableStateFlow(prefs.apps)
     val apps: StateFlow<List<AppShortcut>> = _apps.asStateFlow()
 
+    // Als Compose-State, damit die Einstellungen sofort sichtbar umschalten.
+    private val hapticState = mutableStateOf(prefs.hapticEnabled)
+    private val volumeKeysState = mutableStateOf(prefs.volumeKeysEnabled)
+    private val imeState = mutableStateOf(prefs.imeEnabled)
+    private val clientNameState = mutableStateOf(prefs.clientName)
+
     var hapticEnabled: Boolean
-        get() = prefs.hapticEnabled
-        set(value) { prefs.hapticEnabled = value }
+        get() = hapticState.value
+        set(value) { hapticState.value = value; prefs.hapticEnabled = value }
 
     var volumeKeysEnabled: Boolean
-        get() = prefs.volumeKeysEnabled
-        set(value) { prefs.volumeKeysEnabled = value }
+        get() = volumeKeysState.value
+        set(value) { volumeKeysState.value = value; prefs.volumeKeysEnabled = value }
 
     var imeEnabled: Boolean
-        get() = prefs.imeEnabled
-        set(value) { prefs.imeEnabled = value }
+        get() = imeState.value
+        set(value) { imeState.value = value; prefs.imeEnabled = value }
 
     var clientName: String
-        get() = prefs.clientName
-        set(value) { prefs.clientName = value }
+        get() = clientNameState.value
+        set(value) { clientNameState.value = value; prefs.clientName = value }
 
     private var connectJob: Job? = null
     private var discoveryJob: Job? = null
@@ -84,7 +91,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     fun startDiscovery() {
         if (discoveryJob?.isActive == true) return
         discoveryJob = viewModelScope.launch {
-            Discovery.devices(getApplication())
+            Discovery.devices(getApplication<Application>())
                 .catch { _state.value = _state.value.copy(message = "Suche nicht möglich: ${it.message}") }
                 .collect { _devices.value = it }
         }
@@ -265,7 +272,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     fun resetIdentity() {
         disconnect()
         closePairing()
-        ClientIdentity.reset(getApplication())
+        ClientIdentity.reset(getApplication<Application>())
         _state.value = _state.value.copy(message = "Zertifikat gelöscht – bitte neu koppeln.")
     }
 

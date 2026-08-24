@@ -40,15 +40,17 @@ class Prefs(context: Context) {
             )
         }
         set(value) {
-            prefs.edit().apply {
-                if (value == null) {
-                    remove(KEY_HOST); remove(KEY_NAME); remove(KEY_PORT)
-                } else {
-                    putString(KEY_HOST, value.host)
-                    putString(KEY_NAME, value.name)
-                    putInt(KEY_PORT, value.port)
-                }
-            }.apply()
+            val editor = prefs.edit()
+            if (value == null) {
+                editor.remove(KEY_HOST)
+                editor.remove(KEY_NAME)
+                editor.remove(KEY_PORT)
+            } else {
+                editor.putString(KEY_HOST, value.host)
+                editor.putString(KEY_NAME, value.name)
+                editor.putInt(KEY_PORT, value.port)
+            }
+            editor.apply()
         }
 
     /** Name, der beim Pairing auf dem Beamer angezeigt wird. */

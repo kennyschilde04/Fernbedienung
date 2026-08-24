@@ -82,8 +82,8 @@ class RemoteClient(
                         message(FIELD_CONFIGURE) {
                             int(1, activeFeatures)
                             message(2) {
-                                string(1, Build.MODEL ?: "Android")
-                                string(2, Build.MANUFACTURER ?: "Android")
+                                string(1, deviceProperty { Build.MODEL })
+                                string(2, deviceProperty { Build.MANUFACTURER })
                                 int(3, 1)
                                 string(4, "1")
                                 string(5, "atvremote")
@@ -129,6 +129,9 @@ class RemoteClient(
         val s = socket ?: throw IllegalStateException("Nicht verbunden")
         synchronized(writeLock) { Frames.write(s.outputStream, message) }
     }
+
+    private fun deviceProperty(block: () -> String?): String =
+        runCatching { block() }.getOrNull()?.takeIf { it.isNotBlank() } ?: "Android"
 
     private fun requestedFeatures(): Int =
         FEATURE_PING or FEATURE_KEY or FEATURE_POWER or FEATURE_VOLUME or FEATURE_APP_LINK or

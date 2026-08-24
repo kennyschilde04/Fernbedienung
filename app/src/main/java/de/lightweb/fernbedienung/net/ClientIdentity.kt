@@ -34,11 +34,15 @@ class ClientIdentity private constructor(
         @Volatile
         private var cached: ClientIdentity? = null
 
-        fun get(context: Context): ClientIdentity {
+        fun get(context: Context): ClientIdentity =
+            get(File(context.filesDir, FILE_NAME), sanitize(runCatching { Build.MODEL }.getOrNull()))
+
+        /** Laedt die Identitaet aus der Datei oder erzeugt sie beim ersten Mal. */
+        internal fun get(file: File, label: String): ClientIdentity {
             cached?.let { return it }
             synchronized(this) {
                 cached?.let { return it }
-                val identity = load(context) ?: create(context)
+                val identity = load(file) ?: create(file, label)
                 cached = identity
                 return identity
             }
@@ -52,8 +56,7 @@ class ClientIdentity private constructor(
             }
         }
 
-        private fun load(context: Context): ClientIdentity? {
-            val file = File(context.filesDir, FILE_NAME)
+        private fun load(file: File): ClientIdentity? {
             if (!file.exists()) return null
             return try {
                 val store = KeyStore.getInstance("PKCS12")
@@ -67,12 +70,12 @@ class ClientIdentity private constructor(
             }
         }
 
-        private fun create(context: Context): ClientIdentity {
+        private fun create(file: File, label: String): ClientIdentity {
             val generator = KeyPairGenerator.getInstance("RSA")
             generator.initialize(2048, SecureRandom())
             val keyPair = generator.generateKeyPair()
 
-            val name = X500Name("CN=Fernbedienung, O=Fernbedienung, OU=${sanitize(Build.MODEL)}")
+            val name = X500Name("CN=Fernbedienung, O=Fernbedienung, OU=$label")
             val now = System.currentTimeMillis()
             val notBefore = Date(now - 24L * 60 * 60 * 1000)
             val notAfter = Date(now + 30L * 365 * 24 * 60 * 60 * 1000)
@@ -85,7 +88,7 @@ class ClientIdentity private constructor(
             val store = KeyStore.getInstance("PKCS12")
             store.load(null, null)
             store.setKeyEntry(ALIAS, keyPair.private, PASSWORD, arrayOf(certificate))
-            File(context.filesDir, FILE_NAME).outputStream().use { store.store(it, PASSWORD) }
+            file.outputStream().use { store.store(it, PASSWORD) }
 
             return ClientIdentity(keyPair.private, certificate)
         }

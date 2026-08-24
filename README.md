@@ -78,6 +78,21 @@ installierbar ist – für den Play Store müsste ein eigener Signaturschlüssel
 | `RemoteViewModel.kt` | Verbindungsverwaltung inkl. automatischem Wiederverbinden |
 | `ui/` | Oberfläche mit Jetpack Compose (Material 3) |
 
+### Protokolltest ohne Beamer
+
+Unter `tools/protokolltest/` liegt ein End-zu-End-Test: Ein Mock-Beamer in Python spricht
+das Protokoll mit den **Original-Protobuf-Dateien** und der offiziellen protobuf-Laufzeit,
+der echte Kotlin-Client koppelt sich dagegen und sendet Tasten. Damit wird der
+handgeschriebene Codec gegen eine unabhängige Implementierung geprüft:
+
+```bash
+tools/protokolltest/run.sh
+```
+
+Geprüft werden: TLS mit Client-Zertifikat, der komplette Pairing-Ablauf inklusive
+SHA-256-Geheimnis, die Konfigurations- und Ping-Nachrichten sowie Tastendrücke,
+HDMI-Umschaltung, App-Links und das Auslesen der Lautstärke.
+
 Das Protokoll ist nachgebaut nach den offenen Implementierungen
 [tronikos/androidtvremote2](https://github.com/tronikos/androidtvremote2) und
 [louis49/androidtv-remote](https://github.com/louis49/androidtv-remote).
