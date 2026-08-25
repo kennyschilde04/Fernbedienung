@@ -22,13 +22,19 @@ data class Macro(
         .put("delayMs", delayMs)
 
     companion object {
-        const val DEFAULT_DELAY_MS = 700
+        const val DEFAULT_DELAY_MS = 1000
+
+        /** Pseudo-Schritt: einfach warten, statt eine Taste zu senden. */
+        const val STEP_PAUSE = -1
+
+        /** Nach dem Startbildschirm braucht die Oberflaeche laenger, bis sie Tasten annimmt. */
+        const val HOME_SETTLE_MS = 2500
 
         /** Vorgaben für die Wartezeit zwischen zwei Tasten. */
         val SPEEDS: List<Pair<String, Int>> = listOf(
-            "Schnell" to 400,
-            "Normal" to 700,
-            "Langsam" to 1200,
+            "Schnell" to 600,
+            "Normal" to 1000,
+            "Langsam" to 1800,
         )
 
         fun fromJson(o: JSONObject): Macro {
@@ -44,6 +50,7 @@ data class Macro(
         fun describe(steps: List<Int>): String = steps.joinToString(" → ") { label(it) }
 
         fun label(keyCode: Int): String = when (keyCode) {
+            STEP_PAUSE -> "Pause"
             KeyCodes.HOME -> "Home"
             KeyCodes.BACK -> "Zurück"
             KeyCodes.DPAD_UP -> "Hoch"

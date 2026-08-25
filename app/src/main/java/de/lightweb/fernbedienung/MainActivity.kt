@@ -100,6 +100,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
     var askForName by remember { mutableStateOf(false) }
     var foundComponent by remember { mutableStateOf<String?>(null) }
     var packages by remember { mutableStateOf<List<String>>(emptyList()) }
+    var candidates by remember { mutableStateOf<List<String>>(emptyList()) }
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(state.message) {
@@ -184,12 +185,14 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     macros = macros,
                     recording = viewModel.isRecording,
                     recordedCount = viewModel.recordedSteps.size,
+                    appendTo = viewModel.appendTarget?.name,
                     onKey = viewModel::sendKey,
                     onApp = viewModel::launchApp,
                     adbActions = adbActions,
                     onRunMacro = viewModel::runMacro,
                     onRunAdbAction = viewModel::runAdbAction,
                     onFinishRecording = { askForName = true },
+                    onRecordPause = { viewModel.recordPause() },
                     onCancelRecording = { viewModel.cancelRecording() },
                     onOpenHdmiSetup = { screen = Screen.HDMI },
                     onOpenMacros = { screen = Screen.MACROS },
@@ -236,12 +239,20 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                 Screen.MACROS -> MacrosScreen(
                     macros = macros,
                     connected = state.status == Status.CONNECTED,
+                    running = viewModel.runningMacro,
                     onStartRecording = {
                         viewModel.startRecording()
                         screen = Screen.REMOTE
                     },
+                    onAppendSteps = { macro ->
+                        viewModel.startAppending(macro)
+                        screen = Screen.REMOTE
+                    },
                     onRun = viewModel::runMacro,
+                    onStop = viewModel::stopMacro,
                     onDelete = viewModel::deleteMacro,
+                    onDropLastStep = viewModel::dropLastStep,
+                    onAppendPause = viewModel::appendPause,
                     onChangeSpeed = { macro, delay ->
                         viewModel.saveMacros(macros.map { if (it == macro) it.copy(delayMs = delay) else it })
                     },
@@ -256,11 +267,14 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     onConnect = viewModel::adbConnect,
                     onDisconnect = viewModel::adbDisconnect,
                     onReadCurrentActivity = { viewModel.adbReadCurrentActivity { foundComponent = it } },
+                    onWatch = { seconds -> viewModel.adbWatchActivities(seconds) { candidates = it } },
+                    onDiagnose = { viewModel.adbDiagnose { candidates = it } },
                     onListPackages = { viewModel.adbListPackages { packages = it } },
                     onShell = viewModel::adbShell,
                     onRunAction = viewModel::runAdbAction,
                     onDeleteAction = viewModel::deleteAdbAction,
                     foundComponent = foundComponent,
+                    candidates = candidates,
                     packages = packages,
                     onSaveComponent = { name, command ->
                         viewModel.addAdbAction(de.lightweb.fernbedienung.data.AdbAction(name.trim(), command))
@@ -285,6 +299,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
     if (askForName) {
         SaveRecordingDialog(
             steps = viewModel.recordedSteps,
+            appendTo = viewModel.appendTarget?.name,
             onSave = { name ->
                 viewModel.saveRecording(name)
                 askForName = false

@@ -63,11 +63,13 @@ fun RemoteScreen(
     adbActions: List<AdbAction>,
     recording: Boolean,
     recordedCount: Int,
+    appendTo: String?,
     onKey: (Int) -> Unit,
     onApp: (String) -> Unit,
     onRunMacro: (Macro) -> Unit,
     onRunAdbAction: (AdbAction) -> Unit,
     onFinishRecording: () -> Unit,
+    onRecordPause: () -> Unit,
     onCancelRecording: () -> Unit,
     onOpenHdmiSetup: () -> Unit,
     onOpenMacros: () -> Unit,
@@ -88,18 +90,31 @@ fun RemoteScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("Aufnahme läuft", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "Navigiere jetzt wie gewohnt zum Ziel – $recordedCount Schritte aufgenommen.",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp),
+                        text = if (appendTo != null) "Schritte anhängen an „$appendTo“" else "Aufnahme läuft",
+                        style = MaterialTheme.typography.titleMedium,
                     )
+                    Text(
+                        text = "$recordedCount Schritte aufgenommen",
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                    Text(
+                        text = "Navigiere jetzt wie gewohnt zum Ziel. Jeder Tastendruck unten wird " +
+                            "mitgeschrieben und gleichzeitig an den Beamer gesendet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                    Button(
+                        onClick = onFinishRecording,
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    ) { Text("Aufnahme beenden") }
                     Row(
-                        modifier = Modifier.padding(top = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Button(onClick = onFinishRecording) { Text("Fertig") }
-                        TextButton(onClick = onCancelRecording) { Text("Abbrechen") }
+                        TextButton(onClick = onRecordPause) { Text("Pause einfügen") }
+                        TextButton(onClick = onCancelRecording) { Text("Verwerfen") }
                     }
                 }
             }

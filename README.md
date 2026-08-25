@@ -114,8 +114,12 @@ der Oberfläche des Geräts – erreichbar allein über das Steuerkreuz. Für di
 **Eigene Tasten**: Die Navigation wird einmal aufgezeichnet und danach mit einem Tippen abgespielt.
 
 Die Aufnahme startet automatisch auf dem Startbildschirm, damit der Ausgangspunkt beim Abspielen
-derselbe ist. Das Tempo zwischen zwei Tasten lässt sich pro Folge einstellen (schnell / normal /
-langsam), falls die Oberfläche des Beamers träge reagiert.
+derselbe ist; nach dem Sprung dorthin wartet die Wiedergabe extra lange, weil der Startbildschirm
+eine Weile braucht, bis er Tasten annimmt.
+
+Eine gespeicherte Folge lässt sich nachbearbeiten, ohne sie neu aufzunehmen: **Schritte anhängen**
+(wenn am Ende etwa das letzte „OK“ fehlt), **Letzten löschen**, **Pause anhängen** und das Tempo
+umstellen (600 / 1000 / 1800 ms). Während des Abspielens zeigt die Folge „Läuft – anhalten“.
 
 Das funktioniert für alles, was sich mit dem Steuerkreuz erreichen lässt – nicht nur für HDMI.
 
@@ -135,9 +139,13 @@ der Beamer auf der Leinwand nach Bestätigung des Schlüssels.
 
 Danach unter **Einstellungen → Direktzugriff (ADB)**:
 
-- **Laufenden Bildschirm auslesen** – den HDMI-Eingang am Beamer öffnen, hier tippen: Die App
-  liest den Komponentennamen aus (`dumpsys`) und legt daraus eine Taste an, die ihn künftig direkt
-  startet (`am start -n paket/activity`).
+- **30 Sekunden beobachten** – Beobachtung starten, dann in Ruhe am Beamer auf HDMI wechseln. Die
+  App notiert jeden Bildschirm, der in der Zeit im Vordergrund war, und bietet ihn zum Ausprobieren
+  und Anlegen an. Das ist der verlässliche Weg – „Jetzt auslesen“ trifft sonst leicht den
+  Startbildschirm.
+- **Eingänge durchsuchen** – befragt die Eingangsverwaltung von Android TV direkt
+  (`dumpsys tv_input`), sucht nach zuletzt geöffneten Passthrough-Links und nach Paketen, deren
+  Name nach Eingangsquelle klingt. Treffer landen als Kandidaten in derselben Liste.
 - **App-Liste auslesen** – alle installierten Apps; ein Tipp legt eine Starttaste an.
 - **Eigener Befehl** – beliebiger Shell-Befehl mit Ausgabe.
 

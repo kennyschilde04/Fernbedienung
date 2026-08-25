@@ -81,8 +81,17 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     private val recordingState = mutableStateOf(false)
     private val recordedState = mutableStateOf<List<Int>>(emptyList())
 
+    private val appendTargetState = mutableStateOf<Macro?>(null)
+    private val macroRunningState = mutableStateOf<String?>(null)
+
     val isRecording: Boolean get() = recordingState.value
     val recordedSteps: List<Int> get() = recordedState.value
+
+    /** Makro, an das die laufende Aufnahme angehängt wird (statt ein neues anzulegen). */
+    val appendTarget: Macro? get() = appendTargetState.value
+
+    /** Name des gerade abgespielten Makros, sonst null. */
+    val runningMacro: String? get() = macroRunningState.value
 
     // Als Compose-State, damit die Einstellungen sofort sichtbar umschalten.
     private val hapticState = mutableStateOf(prefs.hapticEnabled)
@@ -345,24 +354,62 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
      * Startbildschirm - nur dann ist beim Abspielen der Ausgangspunkt derselbe.
      */
     fun startRecording(startWithHome: Boolean = true) {
+        appendTargetState.value = null
         recordedState.value = emptyList()
         recordingState.value = true
         if (startWithHome) sendKey(KeyCodes.HOME)
     }
 
+    /**
+     * Nimmt weitere Schritte auf und hängt sie an ein bestehendes Makro an.
+     * Nützlich, wenn die Folge fast stimmt und nur der letzte Schritt fehlt.
+     */
+    fun startAppending(macro: Macro) {
+        appendTargetState.value = macro
+        recordedState.value = emptyList()
+        recordingState.value = true
+    }
+
+    /** Fügt eine Wartezeit in die laufende Aufnahme ein. */
+    fun recordPause() {
+        if (recordingState.value) recordedState.value = recordedState.value + Macro.STEP_PAUSE
+    }
+
     fun cancelRecording() {
         recordingState.value = false
         recordedState.value = emptyList()
+        appendTargetState.value = null
     }
 
     /** Beendet die Aufnahme und speichert sie. Gibt zurück, ob etwas zu speichern war. */
     fun saveRecording(name: String, delayMs: Int = Macro.DEFAULT_DELAY_MS): Boolean {
         val steps = recordedState.value
+        val target = appendTargetState.value
         recordingState.value = false
         recordedState.value = emptyList()
-        if (steps.isEmpty() || name.isBlank()) return false
+        appendTargetState.value = null
+        if (steps.isEmpty()) return false
+        if (target != null) {
+            val updated = target.copy(steps = target.steps + steps)
+            saveMacros(_macros.value.map { if (it == target) updated else it })
+            return true
+        }
+        if (name.isBlank()) return false
         saveMacros(_macros.value + Macro(name.trim(), steps, delayMs))
         return true
+    }
+
+    /** Entfernt den letzten Schritt eines Makros. */
+    fun dropLastStep(macro: Macro) {
+        if (macro.steps.isEmpty()) return
+        val updated = macro.copy(steps = macro.steps.dropLast(1))
+        saveMacros(_macros.value.map { if (it == macro) updated else it })
+    }
+
+    /** Hängt eine Wartezeit an ein Makro an. */
+    fun appendPause(macro: Macro) {
+        val updated = macro.copy(steps = macro.steps + Macro.STEP_PAUSE)
+        saveMacros(_macros.value.map { if (it == macro) updated else it })
     }
 
     fun saveMacros(list: List<Macro>) {
@@ -434,6 +481,32 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
                 )
             onFound(component)
             "Gefunden: $component"
+        }
+    }
+
+    /**
+     * Beobachtet eine Weile, welche Bildschirme auf dem Beamer laufen.
+     * Damit laesst sich der HDMI-Bildschirm einfangen, ohne Handy und Leinwand
+     * gleichzeitig im Blick haben zu muessen.
+     */
+    fun adbWatchActivities(seconds: Int, onResult: (List<String>) -> Unit) {
+        adbRun("Beobachte $seconds Sekunden lang") { session ->
+            val seen = mutableListOf<String>()
+            session.watchActivities(seconds) { component ->
+                seen.add(component)
+                adbLog("Gesehen (${seen.size}):\n" + seen.joinToString("\n"))
+            }
+            onResult(seen)
+            if (seen.isEmpty()) "Nichts erkannt." else "Fertig. ${seen.size} Bildschirme gesehen."
+        }
+    }
+
+    /** Sammelt Hinweise auf den HDMI-Eingang und zieht Kandidaten daraus. */
+    fun adbDiagnose(onCandidates: (List<String>) -> Unit) {
+        adbRun("Suche nach dem HDMI-Eingang") { session ->
+            val report = session.diagnose()
+            onCandidates(AdbSession.candidatesFrom(report))
+            report
         }
     }
 

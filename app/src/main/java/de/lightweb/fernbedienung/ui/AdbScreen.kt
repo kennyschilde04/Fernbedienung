@@ -56,11 +56,14 @@ fun AdbScreen(
     onConnect: (String) -> Unit,
     onDisconnect: () -> Unit,
     onReadCurrentActivity: () -> Unit,
+    onWatch: (Int) -> Unit,
+    onDiagnose: () -> Unit,
     onListPackages: () -> Unit,
     onShell: (String) -> Unit,
     onRunAction: (AdbAction) -> Unit,
     onDeleteAction: (AdbAction) -> Unit,
     foundComponent: String?,
+    candidates: List<String>,
     packages: List<String>,
     onSaveComponent: (String, String) -> Unit,
     onDismissPackages: () -> Unit,
@@ -147,18 +150,64 @@ fun AdbScreen(
 
         SectionTitle("HDMI-Bildschirm einfangen", Modifier.fillMaxWidth())
         Text(
-            "Öffne am Beamer den HDMI-Eingang so, wie du es sonst tust. Tippe dann hier – die App " +
-                "liest aus, welcher Bildschirm gerade läuft, und legt ihn als Taste an. Danach " +
-                "genügt ein Tippen, ohne Navigation.",
+            "Der zuverlässige Weg: Beobachtung starten, dann in Ruhe am Beamer auf HDMI wechseln. " +
+                "Die App notiert dabei jeden Bildschirm, der im Vordergrund war – auch die " +
+                "Zwischenschritte. Am Ende suchst du dir den richtigen aus.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(10.dp))
         Button(
-            onClick = onReadCurrentActivity,
+            onClick = { onWatch(30) },
             enabled = connected && !busy,
             modifier = Modifier.fillMaxWidth(),
-        ) { Text("Laufenden Bildschirm auslesen") }
+        ) { Text("30 Sekunden beobachten") }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = onReadCurrentActivity, enabled = connected && !busy) {
+                Text("Jetzt auslesen")
+            }
+            OutlinedButton(onClick = onDiagnose, enabled = connected && !busy) {
+                Text("Eingänge durchsuchen")
+            }
+        }
+        Text(
+            "„Eingänge durchsuchen“ befragt die Eingangsverwaltung von Android TV direkt und " +
+                "sammelt alles, was nach HDMI aussieht.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+
+        if (candidates.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            SectionTitle("Gefundene Kandidaten", Modifier.fillMaxWidth())
+            Text(
+                "Antippen zum Ausprobieren – der Beamer sollte umschalten. Passt es, gleich als " +
+                    "Taste anlegen.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            candidates.forEach { candidate ->
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Column(Modifier.padding(14.dp)) {
+                        Text(candidate, style = MaterialTheme.typography.bodySmall)
+                        Row(
+                            modifier = Modifier.padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            OutlinedButton(
+                                onClick = { onShell(AdbSession.commandFor(candidate)) },
+                                enabled = connected && !busy,
+                            ) { Text("Testen") }
+                            Button(onClick = { naming = AdbSession.commandFor(candidate) }) {
+                                Text("Als Taste anlegen")
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         if (foundComponent != null) {
             Spacer(Modifier.height(10.dp))
@@ -170,10 +219,10 @@ fun AdbScreen(
                     Text("Gefunden", style = MaterialTheme.typography.titleSmall)
                     Text(foundComponent, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
                     Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { naming = AdbSession.startActivityCommand(foundComponent) }) {
+                        Button(onClick = { naming = AdbSession.commandFor(foundComponent) }) {
                             Text("Als Taste anlegen")
                         }
-                        OutlinedButton(onClick = { onShell(AdbSession.startActivityCommand(foundComponent)) }) {
+                        OutlinedButton(onClick = { onShell(AdbSession.commandFor(foundComponent)) }) {
                             Text("Testen")
                         }
                     }
