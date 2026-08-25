@@ -422,19 +422,40 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     /** Spielt eine aufgezeichnete Folge ab. */
     fun runMacro(macro: Macro) {
         macroJob?.cancel()
-        runCatching { adbSession.close() }
+        macroRunningState.value = macro.name
         macroJob = viewModelScope.launch(Dispatchers.IO) {
-            for (step in macro.steps) {
-                val current = client ?: break
-                try {
-                    current.sendKey(step)
-                } catch (t: Throwable) {
-                    // Verbindung weg - Rest der Folge waere ohnehin wirkungslos
-                    break
+            try {
+                for (step in macro.steps) {
+                    if (step == Macro.STEP_PAUSE) {
+                        delay(macro.delayMs.toLong())
+                        continue
+                    }
+                    val current = client ?: break
+                    try {
+                        current.sendKey(step)
+                    } catch (t: Throwable) {
+                        // Verbindung weg - Rest der Folge waere ohnehin wirkungslos
+                        break
+                    }
+                    // Nach dem Sprung auf den Startbildschirm nimmt die Oberflaeche
+                    // erst nach einer Weile wieder Tasten an.
+                    val wait = if (step == KeyCodes.HOME) {
+                        maxOf(macro.delayMs, Macro.HOME_SETTLE_MS)
+                    } else {
+                        macro.delayMs
+                    }
+                    delay(wait.toLong())
                 }
-                delay(macro.delayMs.toLong())
+            } finally {
+                macroRunningState.value = null
             }
         }
+    }
+
+    fun stopMacro() {
+        macroJob?.cancel()
+        macroJob = null
+        macroRunningState.value = null
     }
 
     // -------------------------------------------------------------------- ADB
