@@ -214,7 +214,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                 )
 
                 Screen.HDMI -> HdmiScreen(
-                    enabled = state.status == Status.CONNECTED,
+                    connected = state.status == Status.CONNECTED,
                     haptic = viewModel.hapticEnabled,
                     runningApp = state.currentApp,
                     savedLink = viewModel.hdmiLink,

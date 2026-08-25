@@ -123,6 +123,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
         connectJob = viewModelScope.launch(Dispatchers.IO) {
             var backoff = 1_000L
             while (isActive) {
+                var wasEstablished = false
                 val listener = object : RemoteClient.Listener {
                     override fun onConnected(deviceModel: String, deviceVendor: String) {
                         val label = listOf(deviceVendor, deviceModel)
@@ -133,6 +134,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
                     }
 
                     override fun onReady(poweredOn: Boolean) {
+                        wasEstablished = true
                         update { it.copy(status = Status.CONNECTED, poweredOn = poweredOn, message = null) }
                     }
 
@@ -180,14 +182,17 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
                     return@launch
                 }
 
+                // Stand die Verbindung schon einmal, war es ein Abbruch und kein
+                // Verbindungsproblem - dann sofort wieder von vorn anfangen. Das
+                // passiert regelmaessig, wenn der Beamer mit einem App-Link nichts
+                // anfangen kann, und darf die Suche nicht ausbremsen.
+                if (wasEstablished) backoff = 1_000L
+
                 update {
                     it.copy(
                         status = Status.CONNECTING,
-                        message = when (failure) {
-                            null -> null
-                            is IOException -> "Verbindung verloren – neuer Versuch …"
-                            else -> failure.message
-                        },
+                        // Ein normaler Abbruch braucht keine Meldung, der Status zeigt es schon.
+                        message = if (failure == null || failure is IOException) null else failure.message,
                     )
                 }
 

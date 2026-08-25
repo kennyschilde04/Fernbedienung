@@ -87,8 +87,14 @@ Paket, Dienst und Kennung hängen vom Chipsatz ab, zum Beispiel
 lässt sich das nicht abfragen, deshalb hat die App einen Assistenten:
 
 **Fernbedienung → „HDMI einrichten“** probiert die bekannten Varianten durch – einzeln oder
-automatisch alle 2,5 Sekunden. Sobald das HDMI-Bild auf der Leinwand erscheint, auf „Das war’s“
-tippen; der Link wird gespeichert und liegt danach als **HDMI**-Taste auf der Fernbedienung.
+automatisch. Sobald das HDMI-Bild auf der Leinwand erscheint, auf „Das war’s“ tippen; der Link
+wird gespeichert und liegt danach als **HDMI**-Taste auf der Fernbedienung.
+
+Kann der Beamer mit einem Link nichts anfangen, wirft sein Fernbedienungs-Dienst eine Ausnahme
+und kappt die Verbindung. Die App verbindet sich deshalb nach jedem Versuch automatisch neu und
+setzt die Suche fort. Genau dieses Verhalten ist zugleich die Trefferanzeige: **bleibt die
+Verbindung nach einem Versuch bestehen, hat der Beamer den Link verstanden** – der Assistent
+markiert solche Varianten und bietet sie direkt zum Speichern an.
 
 Zwei Hilfen zur Eingrenzung:
 
