@@ -235,7 +235,7 @@ def remote_server(client_cert_pem, port):
     seen_links = []
     conn.settimeout(15)
     try:
-        while len(seen_keys) < 2 or not seen_links:
+        while len(seen_keys) < 2 or len(seen_links) < 2:
             msg = recv(conn, RM)
             if msg.HasField("remote_key_inject"):
                 k = msg.remote_key_inject
@@ -251,6 +251,10 @@ def remote_server(client_cert_pem, port):
     RESULTS.append(("Taste OK (23/SHORT)", (23, 3) in seen_keys))
     RESULTS.append(("Taste HDMI 1 (243)", (243, 3) in seen_keys))
     RESULTS.append(("App-Link YouTube", "https://www.youtube.com" in seen_links))
+    RESULTS.append((
+        "App-Link HDMI-Passthrough",
+        "content://android.media.tv/passthrough/com.droidlogic.tvinput/.services.Hdmi1InputService/HW5" in seen_links,
+    ))
     conn.close()
     srv.close()
 

@@ -72,6 +72,15 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(KEY_HAPTIC, true)
         set(value) = prefs.edit().putBoolean(KEY_HAPTIC, value).apply()
 
+    /** Gefundener Passthrough-Link fuer den HDMI-Eingang, siehe HdmiInputs. */
+    var hdmiLink: String?
+        get() = prefs.getString(KEY_HDMI_LINK, null)
+        set(value) {
+            val editor = prefs.edit()
+            if (value.isNullOrBlank()) editor.remove(KEY_HDMI_LINK) else editor.putString(KEY_HDMI_LINK, value)
+            editor.apply()
+        }
+
     var apps: List<AppShortcut>
         get() {
             val raw = prefs.getString(KEY_APPS, null) ?: return AppShortcut.DEFAULTS
@@ -107,5 +116,6 @@ class Prefs(context: Context) {
         private const val KEY_HAPTIC = "haptic"
         private const val KEY_VOLUME_KEYS = "volume_keys"
         private const val KEY_APPS = "apps"
+        private const val KEY_HDMI_LINK = "hdmi_link"
     }
 }

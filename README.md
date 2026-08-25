@@ -17,7 +17,7 @@ installiert werden – der Dienst ist dort schon vorhanden.
 - **Ein/Aus** (Standby)
 - **App-Verknüpfungen**: YouTube, Netflix, Prime Video, Disney+, ARD, ZDF, Spotify, Play Store –
   eigene Verknüpfungen können hinzugefügt werden
-- **Eingang umschalten**: HDMI 1–4 und „Quelle“
+- **HDMI-Eingang** mit eigenem Einrichtungs-Assistent (siehe unten)
 - **Weitere Tasten** (Menü, Info, Programmführer, Einstellungen, Farbtasten …) und ein Feld für
   beliebige Android-Tastencodes
 
@@ -68,7 +68,35 @@ installierbar ist – für den Play Store müsste ein eigener Signaturschlüssel
 | Koppeln schlägt fehl | Beamer muss eingeschaltet sein. Am Beamer unter *Einstellungen → Apps → Alle Apps anzeigen → Android TV Remote Service → Speicher → Daten löschen*, danach in der App *Kopplung zurücksetzen* und neu koppeln. |
 | Verbindung bricht ab | Normal, wenn der Beamer in den Standby geht. Die App verbindet sich automatisch neu. |
 | Eine App startet nicht | Die App muss auf dem Beamer installiert sein. Der Link lässt sich unter *Einstellungen → App-Verknüpfungen bearbeiten* anpassen. |
-| HDMI-Umschalten reagiert nicht | Nicht jeder Beamer nimmt die HDMI-Tastencodes an. Dann „Quelle“ benutzen und mit dem Steuerkreuz auswählen. |
+| HDMI-Umschalten reagiert nicht | Normal bei Beamern – siehe „HDMI-Eingang“ unten. |
+
+## HDMI-Eingang
+
+Ein Beamer mit Android TV ist kein Fernseher: Die HDMI-Tastencodes einer TV-Fernbedienung
+(`KEYCODE_TV_INPUT_HDMI_1` und Verwandte) werden nur von echter TV-Firmware ausgewertet und
+laufen auf Beamern und Streaming-Geräten ins Leere. Android TV öffnet einen Eingang stattdessen
+über einen Link des TV-Input-Frameworks:
+
+```
+content://android.media.tv/passthrough/<Paket>/<Dienst>/<Kennung>
+```
+
+Paket, Dienst und Kennung hängen vom Chipsatz ab, zum Beispiel
+`com.droidlogic.tvinput/.services.Hdmi1InputService/HW5` (Amlogic) oder
+`com.mediatek.tvinput/.hdmi.HDMIInputService/HW5` (MediaTek). Über die Fernbedienungs-Verbindung
+lässt sich das nicht abfragen, deshalb hat die App einen Assistenten:
+
+**Fernbedienung → „HDMI einrichten“** probiert die bekannten Varianten durch – einzeln oder
+automatisch alle 2,5 Sekunden. Sobald das HDMI-Bild auf der Leinwand erscheint, auf „Das war’s“
+tippen; der Link wird gespeichert und liegt danach als **HDMI**-Taste auf der Fernbedienung.
+
+Zwei Hilfen zur Eingrenzung:
+
+- In den Einstellungen **„Laufende App anzeigen“** einschalten, neu verbinden und einmal mit der
+  Original-Fernbedienung auf HDMI wechseln. Die App zeigt dann das zuständige Paket, und die
+  passenden Varianten rutschen im Assistenten nach oben.
+- Wer einen Rechner zur Hand hat, liest den exakten Link nach einem manuellen Wechsel aus:
+  `adb shell dumpsys activity starter | grep passthrough` – und trägt ihn im Assistenten ein.
 
 ## Technischer Aufbau
 
@@ -81,6 +109,7 @@ installierbar ist – für den Play Store müsste ein eigener Signaturschlüssel
 | `net/RemoteClient.kt` | Steuerverbindung auf Port 6466 (Konfiguration, Ping/Pong, Tasten, App-Links, Lautstärke) |
 | `net/Discovery.kt` | Gerätesuche per mDNS (`_androidtvremote2._tcp`) |
 | `RemoteViewModel.kt` | Verbindungsverwaltung inkl. automatischem Wiederverbinden |
+| `data/HdmiInputs.kt` | bekannte Passthrough-Links der Chipsatz-Familien für den HDMI-Assistenten |
 | `ui/` | Oberfläche mit Jetpack Compose (Material 3) |
 
 ### Protokolltest ohne Beamer

@@ -7,6 +7,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
+private const val HDMI_LINK =
+    "content://android.media.tv/passthrough/com.droidlogic.tvinput/.services.Hdmi1InputService/HW5"
+
 fun main(args: Array<String>) {
     val store = File(args[1])
     val identity = ClientIdentity.get(store, "Testgeraet")
@@ -56,6 +59,7 @@ fun main(args: Array<String>) {
             client.sendKey(23)
             client.sendKey(243)
             client.launchApp("https://www.youtube.com")
+            client.launchApp(HDMI_LINK)
             Thread.sleep(700)
             client.close()
             t.join(2000)

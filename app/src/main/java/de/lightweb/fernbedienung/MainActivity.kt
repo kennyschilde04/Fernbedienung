@@ -45,11 +45,12 @@ import de.lightweb.fernbedienung.ui.AppsScreen
 import de.lightweb.fernbedienung.ui.ConnectScreen
 import de.lightweb.fernbedienung.ui.ExtraKeysScreen
 import de.lightweb.fernbedienung.ui.FernbedienungTheme
+import de.lightweb.fernbedienung.ui.HdmiScreen
 import de.lightweb.fernbedienung.ui.PairingDialog
 import de.lightweb.fernbedienung.ui.RemoteScreen
 import de.lightweb.fernbedienung.ui.SettingsScreen
 
-private enum class Screen { REMOTE, CONNECT, SETTINGS, APPS, EXTRA }
+private enum class Screen { REMOTE, CONNECT, SETTINGS, APPS, EXTRA, HDMI }
 
 class MainActivity : ComponentActivity() {
 
@@ -120,6 +121,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                                 Screen.SETTINGS -> "Einstellungen"
                                 Screen.APPS -> "App-Verknüpfungen"
                                 Screen.EXTRA -> "Weitere Tasten"
+                                Screen.HDMI -> "HDMI-Eingang"
                             },
                             style = MaterialTheme.typography.titleMedium,
                         )
@@ -169,8 +171,10 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     state = state,
                     apps = apps,
                     haptic = viewModel.hapticEnabled,
+                    hdmiLink = viewModel.hdmiLink,
                     onKey = viewModel::sendKey,
                     onApp = viewModel::launchApp,
+                    onOpenHdmiSetup = { screen = Screen.HDMI },
                 )
 
                 Screen.CONNECT -> ConnectScreen(
@@ -192,6 +196,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     onIme = { viewModel.imeEnabled = it },
                     onEditApps = { screen = Screen.APPS },
                     onExtraKeys = { screen = Screen.EXTRA },
+                    onHdmiSetup = { screen = Screen.HDMI },
                     onForgetDevice = { viewModel.forgetDevice(); screen = Screen.CONNECT },
                     onResetIdentity = { viewModel.resetIdentity(); screen = Screen.CONNECT },
                 )
@@ -206,6 +211,16 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     enabled = state.status == Status.CONNECTED,
                     haptic = viewModel.hapticEnabled,
                     onKey = viewModel::sendKey,
+                )
+
+                Screen.HDMI -> HdmiScreen(
+                    enabled = state.status == Status.CONNECTED,
+                    haptic = viewModel.hapticEnabled,
+                    runningApp = state.currentApp,
+                    savedLink = viewModel.hdmiLink,
+                    onSendLink = viewModel::launchApp,
+                    onSendKey = viewModel::sendKey,
+                    onSave = { viewModel.hdmiLink = it?.takeIf { link -> link.isNotBlank() } },
                 )
             }
         }

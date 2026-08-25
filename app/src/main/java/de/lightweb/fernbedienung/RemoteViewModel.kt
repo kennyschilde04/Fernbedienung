@@ -59,6 +59,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     private val volumeKeysState = mutableStateOf(prefs.volumeKeysEnabled)
     private val imeState = mutableStateOf(prefs.imeEnabled)
     private val clientNameState = mutableStateOf(prefs.clientName)
+    private val hdmiLinkState = mutableStateOf(prefs.hdmiLink)
 
     var hapticEnabled: Boolean
         get() = hapticState.value
@@ -71,6 +72,10 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     var imeEnabled: Boolean
         get() = imeState.value
         set(value) { imeState.value = value; prefs.imeEnabled = value }
+
+    var hdmiLink: String?
+        get() = hdmiLinkState.value
+        set(value) { hdmiLinkState.value = value; prefs.hdmiLink = value }
 
     var clientName: String
         get() = clientNameState.value

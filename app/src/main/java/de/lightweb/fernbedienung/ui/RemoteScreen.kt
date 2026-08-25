@@ -51,8 +51,10 @@ fun RemoteScreen(
     state: UiState,
     apps: List<AppShortcut>,
     haptic: Boolean,
+    hdmiLink: String?,
     onKey: (Int) -> Unit,
     onApp: (String) -> Unit,
+    onOpenHdmiSetup: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.status == Status.CONNECTED
@@ -225,11 +227,22 @@ fun RemoteScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (hdmiLink != null) {
+                TextKey(
+                    label = "HDMI",
+                    onClick = { onApp(hdmiLink) },
+                    enabled = enabled,
+                    haptic = haptic,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
             TextKey("Quelle", { onKey(KeyCodes.TV_INPUT) }, enabled = enabled, haptic = haptic)
-            TextKey("HDMI 1", { onKey(KeyCodes.TV_INPUT_HDMI_1) }, enabled = enabled, haptic = haptic)
-            TextKey("HDMI 2", { onKey(KeyCodes.TV_INPUT_HDMI_2) }, enabled = enabled, haptic = haptic)
-            TextKey("HDMI 3", { onKey(KeyCodes.TV_INPUT_HDMI_3) }, enabled = enabled, haptic = haptic)
-            TextKey("HDMI 4", { onKey(KeyCodes.TV_INPUT_HDMI_4) }, enabled = enabled, haptic = haptic)
+            TextKey(
+                label = if (hdmiLink == null) "HDMI einrichten" else "HDMI ändern",
+                onClick = onOpenHdmiSetup,
+                haptic = haptic,
+            )
         }
 
         if (state.currentApp.isNotBlank()) {
