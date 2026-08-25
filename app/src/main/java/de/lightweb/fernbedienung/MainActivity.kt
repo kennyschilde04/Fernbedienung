@@ -46,11 +46,13 @@ import de.lightweb.fernbedienung.ui.ConnectScreen
 import de.lightweb.fernbedienung.ui.ExtraKeysScreen
 import de.lightweb.fernbedienung.ui.FernbedienungTheme
 import de.lightweb.fernbedienung.ui.HdmiScreen
+import de.lightweb.fernbedienung.ui.MacrosScreen
+import de.lightweb.fernbedienung.ui.SaveRecordingDialog
 import de.lightweb.fernbedienung.ui.PairingDialog
 import de.lightweb.fernbedienung.ui.RemoteScreen
 import de.lightweb.fernbedienung.ui.SettingsScreen
 
-private enum class Screen { REMOTE, CONNECT, SETTINGS, APPS, EXTRA, HDMI }
+private enum class Screen { REMOTE, CONNECT, SETTINGS, APPS, EXTRA, HDMI, MACROS }
 
 class MainActivity : ComponentActivity() {
 
@@ -91,7 +93,9 @@ private fun AppRoot(viewModel: RemoteViewModel) {
     val devices by viewModel.devices.collectAsState()
     val apps by viewModel.apps.collectAsState()
 
+    val macros by viewModel.macros.collectAsState()
     var screen by remember { mutableStateOf(if (state.device == null) Screen.CONNECT else Screen.REMOTE) }
+    var askForName by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(state.message) {
@@ -122,6 +126,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                                 Screen.APPS -> "App-Verknüpfungen"
                                 Screen.EXTRA -> "Weitere Tasten"
                                 Screen.HDMI -> "HDMI-Eingang"
+                                Screen.MACROS -> "Eigene Tasten"
                             },
                             style = MaterialTheme.typography.titleMedium,
                         )
@@ -135,10 +140,9 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                 navigationIcon = {
                     if (screen != Screen.REMOTE) {
                         IconButton(onClick = {
-                            screen = if (screen == Screen.APPS || screen == Screen.EXTRA) {
-                                Screen.SETTINGS
-                            } else {
-                                Screen.REMOTE
+                            screen = when (screen) {
+                                Screen.APPS, Screen.EXTRA -> Screen.SETTINGS
+                                else -> Screen.REMOTE
                             }
                         }) {
                             Icon(Icons.Filled.ArrowBack, contentDescription = "Zurück")
@@ -172,9 +176,16 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     apps = apps,
                     haptic = viewModel.hapticEnabled,
                     hdmiLink = viewModel.hdmiLink,
+                    macros = macros,
+                    recording = viewModel.isRecording,
+                    recordedCount = viewModel.recordedSteps.size,
                     onKey = viewModel::sendKey,
                     onApp = viewModel::launchApp,
+                    onRunMacro = viewModel::runMacro,
+                    onFinishRecording = { askForName = true },
+                    onCancelRecording = { viewModel.cancelRecording() },
                     onOpenHdmiSetup = { screen = Screen.HDMI },
+                    onOpenMacros = { screen = Screen.MACROS },
                 )
 
                 Screen.CONNECT -> ConnectScreen(
@@ -197,6 +208,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     onEditApps = { screen = Screen.APPS },
                     onExtraKeys = { screen = Screen.EXTRA },
                     onHdmiSetup = { screen = Screen.HDMI },
+                    onMacros = { screen = Screen.MACROS },
                     onForgetDevice = { viewModel.forgetDevice(); screen = Screen.CONNECT },
                     onResetIdentity = { viewModel.resetIdentity(); screen = Screen.CONNECT },
                 )
@@ -213,6 +225,20 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     onKey = viewModel::sendKey,
                 )
 
+                Screen.MACROS -> MacrosScreen(
+                    macros = macros,
+                    connected = state.status == Status.CONNECTED,
+                    onStartRecording = {
+                        viewModel.startRecording()
+                        screen = Screen.REMOTE
+                    },
+                    onRun = viewModel::runMacro,
+                    onDelete = viewModel::deleteMacro,
+                    onChangeSpeed = { macro, delay ->
+                        viewModel.saveMacros(macros.map { if (it == macro) it.copy(delayMs = delay) else it })
+                    },
+                )
+
                 Screen.HDMI -> HdmiScreen(
                     connected = state.status == Status.CONNECTED,
                     haptic = viewModel.hapticEnabled,
@@ -224,6 +250,21 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                 )
             }
         }
+    }
+
+    if (askForName) {
+        SaveRecordingDialog(
+            steps = viewModel.recordedSteps,
+            onSave = { name ->
+                viewModel.saveRecording(name)
+                askForName = false
+                screen = Screen.MACROS
+            },
+            onDiscard = {
+                viewModel.cancelRecording()
+                askForName = false
+            },
+        )
     }
 
     if (state.status == Status.PAIRING_CODE) {

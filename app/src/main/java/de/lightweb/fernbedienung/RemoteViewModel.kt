@@ -6,6 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.lightweb.fernbedienung.data.AppShortcut
 import de.lightweb.fernbedienung.data.Device
+import de.lightweb.fernbedienung.data.KeyCodes
+import de.lightweb.fernbedienung.data.Macro
 import de.lightweb.fernbedienung.data.Prefs
 import de.lightweb.fernbedienung.net.ClientIdentity
 import de.lightweb.fernbedienung.net.Discovery
@@ -54,6 +56,16 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     private val _apps = MutableStateFlow(prefs.apps)
     val apps: StateFlow<List<AppShortcut>> = _apps.asStateFlow()
 
+    private val _macros = MutableStateFlow(prefs.macros)
+    val macros: StateFlow<List<Macro>> = _macros.asStateFlow()
+
+    /** Läuft gerade eine Aufnahme? Dann wandert jeder Tastendruck zusätzlich in die Liste. */
+    private val recordingState = mutableStateOf(false)
+    private val recordedState = mutableStateOf<List<Int>>(emptyList())
+
+    val isRecording: Boolean get() = recordingState.value
+    val recordedSteps: List<Int> get() = recordedState.value
+
     // Als Compose-State, damit die Einstellungen sofort sichtbar umschalten.
     private val hapticState = mutableStateOf(prefs.hapticEnabled)
     private val volumeKeysState = mutableStateOf(prefs.volumeKeysEnabled)
@@ -86,6 +98,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     private var client: RemoteClient? = null
     private var pairingSession: PairingSession? = null
     private var pairingDevice: Device? = null
+    private var macroJob: Job? = null
 
     init {
         prefs.device?.let { connect(it) }
@@ -289,6 +302,9 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     // -------------------------------------------------------------- Befehle
 
     fun sendKey(keyCode: Int, direction: Int = RemoteClient.DIRECTION_SHORT) {
+        if (recordingState.value && direction == RemoteClient.DIRECTION_SHORT) {
+            recordedState.value = recordedState.value + keyCode
+        }
         val current = client ?: return
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { current.sendKey(keyCode, direction) }
@@ -301,6 +317,57 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { current.launchApp(link) }
                 .onFailure { update { s -> s.copy(message = "App konnte nicht gestartet werden.") } }
+        }
+    }
+
+    // --------------------------------------------------------------- Makros
+
+    /**
+     * Startet die Aufnahme. Mit [startWithHome] beginnt die Folge auf dem
+     * Startbildschirm - nur dann ist beim Abspielen der Ausgangspunkt derselbe.
+     */
+    fun startRecording(startWithHome: Boolean = true) {
+        recordedState.value = emptyList()
+        recordingState.value = true
+        if (startWithHome) sendKey(KeyCodes.HOME)
+    }
+
+    fun cancelRecording() {
+        recordingState.value = false
+        recordedState.value = emptyList()
+    }
+
+    /** Beendet die Aufnahme und speichert sie. Gibt zurück, ob etwas zu speichern war. */
+    fun saveRecording(name: String, delayMs: Int = Macro.DEFAULT_DELAY_MS): Boolean {
+        val steps = recordedState.value
+        recordingState.value = false
+        recordedState.value = emptyList()
+        if (steps.isEmpty() || name.isBlank()) return false
+        saveMacros(_macros.value + Macro(name.trim(), steps, delayMs))
+        return true
+    }
+
+    fun saveMacros(list: List<Macro>) {
+        prefs.macros = list
+        _macros.value = list
+    }
+
+    fun deleteMacro(macro: Macro) = saveMacros(_macros.value - macro)
+
+    /** Spielt eine aufgezeichnete Folge ab. */
+    fun runMacro(macro: Macro) {
+        macroJob?.cancel()
+        macroJob = viewModelScope.launch(Dispatchers.IO) {
+            for (step in macro.steps) {
+                val current = client ?: break
+                try {
+                    current.sendKey(step)
+                } catch (t: Throwable) {
+                    // Verbindung weg - Rest der Folge waere ohnehin wirkungslos
+                    break
+                }
+                delay(macro.delayMs.toLong())
+            }
         }
     }
 
@@ -322,6 +389,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
 
     override fun onCleared() {
         super.onCleared()
+        macroJob?.cancel()
         closeClient()
         closePairing()
     }

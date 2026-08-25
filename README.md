@@ -18,6 +18,7 @@ installiert werden – der Dienst ist dort schon vorhanden.
 - **App-Verknüpfungen**: YouTube, Netflix, Prime Video, Disney+, ARD, ZDF, Spotify, Play Store –
   eigene Verknüpfungen können hinzugefügt werden
 - **HDMI-Eingang** mit eigenem Einrichtungs-Assistent (siehe unten)
+- **Eigene Tasten**: Tastenfolgen aufnehmen und auf Knopfdruck abspielen
 - **Weitere Tasten** (Menü, Info, Programmführer, Einstellungen, Farbtasten …) und ein Feld für
   beliebige Android-Tastencodes
 
@@ -68,7 +69,7 @@ installierbar ist – für den Play Store müsste ein eigener Signaturschlüssel
 | Koppeln schlägt fehl | Beamer muss eingeschaltet sein. Am Beamer unter *Einstellungen → Apps → Alle Apps anzeigen → Android TV Remote Service → Speicher → Daten löschen*, danach in der App *Kopplung zurücksetzen* und neu koppeln. |
 | Verbindung bricht ab | Normal, wenn der Beamer in den Standby geht. Die App verbindet sich automatisch neu. |
 | Eine App startet nicht | Die App muss auf dem Beamer installiert sein. Der Link lässt sich unter *Einstellungen → App-Verknüpfungen bearbeiten* anpassen. |
-| HDMI-Umschalten reagiert nicht | Normal bei Beamern – siehe „HDMI-Eingang“ unten. |
+| HDMI-Umschalten reagiert nicht | Normal bei Beamern – siehe „HDMI-Eingang“ und „Eigene Tasten“ unten. |
 
 ## HDMI-Eingang
 
@@ -104,6 +105,18 @@ Zwei Hilfen zur Eingrenzung:
 - Wer einen Rechner zur Hand hat, liest den exakten Link nach einem manuellen Wechsel aus:
   `adb shell dumpsys activity starter | grep passthrough` – und trägt ihn im Assistenten ein.
 
+### Eigene Tasten (Tastenfolgen)
+
+Bei vielen Beamern ist der HDMI-Eingang weder eine Taste noch ein Link, sondern nur ein Punkt in
+der Oberfläche des Geräts – erreichbar allein über das Steuerkreuz. Für diesen Fall gibt es
+**Eigene Tasten**: Die Navigation wird einmal aufgezeichnet und danach mit einem Tippen abgespielt.
+
+Die Aufnahme startet automatisch auf dem Startbildschirm, damit der Ausgangspunkt beim Abspielen
+derselbe ist. Das Tempo zwischen zwei Tasten lässt sich pro Folge einstellen (schnell / normal /
+langsam), falls die Oberfläche des Beamers träge reagiert.
+
+Das funktioniert für alles, was sich mit dem Steuerkreuz erreichen lässt – nicht nur für HDMI.
+
 ## Technischer Aufbau
 
 | Datei | Inhalt |
@@ -116,6 +129,7 @@ Zwei Hilfen zur Eingrenzung:
 | `net/Discovery.kt` | Gerätesuche per mDNS (`_androidtvremote2._tcp`) |
 | `RemoteViewModel.kt` | Verbindungsverwaltung inkl. automatischem Wiederverbinden |
 | `data/HdmiInputs.kt` | bekannte Passthrough-Links der Chipsatz-Familien für den HDMI-Assistenten |
+| `data/Macro.kt` | aufgezeichnete Tastenfolgen samt Speicherformat |
 | `ui/` | Oberfläche mit Jetpack Compose (Material 3) |
 
 ### Protokolltest ohne Beamer

@@ -3,6 +3,7 @@ package de.lightweb.fernbedienung.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
@@ -31,9 +32,13 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +49,7 @@ import de.lightweb.fernbedienung.Status
 import de.lightweb.fernbedienung.UiState
 import de.lightweb.fernbedienung.data.AppShortcut
 import de.lightweb.fernbedienung.data.KeyCodes
+import de.lightweb.fernbedienung.data.Macro
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -52,9 +58,16 @@ fun RemoteScreen(
     apps: List<AppShortcut>,
     haptic: Boolean,
     hdmiLink: String?,
+    macros: List<Macro>,
+    recording: Boolean,
+    recordedCount: Int,
     onKey: (Int) -> Unit,
     onApp: (String) -> Unit,
+    onRunMacro: (Macro) -> Unit,
+    onFinishRecording: () -> Unit,
+    onCancelRecording: () -> Unit,
     onOpenHdmiSetup: () -> Unit,
+    onOpenMacros: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.status == Status.CONNECTED
@@ -66,6 +79,29 @@ fun RemoteScreen(
             .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        if (recording) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Aufnahme läuft", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Navigiere jetzt wie gewohnt zum Ziel – $recordedCount Schritte aufgenommen.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    Row(
+                        modifier = Modifier.padding(top = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Button(onClick = onFinishRecording) { Text("Fertig") }
+                        TextButton(onClick = onCancelRecording) { Text("Abbrechen") }
+                    }
+                }
+            }
+        }
+
         // Ein/Aus, Zurück, Home, Suche
         KeyRow {
             IconKey(
@@ -241,6 +277,31 @@ fun RemoteScreen(
             TextKey(
                 label = if (hdmiLink == null) "HDMI einrichten" else "HDMI ändern",
                 onClick = onOpenHdmiSetup,
+                haptic = haptic,
+            )
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        SectionTitle("Eigene Tasten", Modifier.fillMaxWidth())
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            macros.forEach { macro ->
+                TextKey(
+                    label = macro.name,
+                    onClick = { onRunMacro(macro) },
+                    enabled = enabled,
+                    haptic = haptic,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            TextKey(
+                label = if (macros.isEmpty()) "Tastenfolge aufnehmen" else "Verwalten",
+                onClick = onOpenMacros,
                 haptic = haptic,
             )
         }

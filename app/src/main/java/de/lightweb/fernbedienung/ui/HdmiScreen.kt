@@ -129,14 +129,23 @@ fun HdmiScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            Text(
-                "Bei jedem Fehlversuch kappt der Beamer die Verbindung – das ist normal und kein " +
-                    "Fehler der App. Sie verbindet sich automatisch neu und macht weiter. Genau " +
-                    "darin liegt der Trick: Bleibt die Verbindung nach einem Versuch bestehen, hat " +
-                    "der Beamer den Link verstanden.",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(16.dp),
-            )
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    "Ist HDMI bei deinem Beamer nur ein Punkt in dessen eigener Oberfläche und " +
+                        "keine Taste, führt dieser Weg meist nicht zum Ziel. Dann ist „Eigene " +
+                        "Tasten“ die bessere Wahl: den Weg dorthin einmal aufnehmen und danach " +
+                        "mit einem Tippen abspielen.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    "Bei jedem Fehlversuch kappt der Beamer die Verbindung – das ist normal und " +
+                        "kein Fehler der App. Sie verbindet sich automatisch neu und macht weiter. " +
+                        "Bleibt die Verbindung nach einem Versuch bestehen, hat der Beamer den Link " +
+                        "verstanden.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            }
         }
 
         if (savedLink != null) {

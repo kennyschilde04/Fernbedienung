@@ -102,6 +102,21 @@ class Prefs(context: Context) {
 
     fun resetApps() = prefs.edit().remove(KEY_APPS).apply()
 
+    /** Aufgezeichnete Tastenfolgen, siehe Macro. */
+    var macros: List<Macro>
+        get() {
+            val raw = prefs.getString(KEY_MACROS, null) ?: return emptyList()
+            return runCatching {
+                val array = JSONArray(raw)
+                (0 until array.length()).map { Macro.fromJson(array.getJSONObject(it)) }
+            }.getOrDefault(emptyList())
+        }
+        set(value) {
+            val array = JSONArray()
+            value.forEach { array.put(it.toJson()) }
+            prefs.edit().putString(KEY_MACROS, array.toString()).apply()
+        }
+
     private fun defaultClientName(): String {
         val model = Build.MODEL?.takeIf { it.isNotBlank() } ?: "Handy"
         return "Fernbedienung ($model)"
@@ -117,5 +132,6 @@ class Prefs(context: Context) {
         private const val KEY_VOLUME_KEYS = "volume_keys"
         private const val KEY_APPS = "apps"
         private const val KEY_HDMI_LINK = "hdmi_link"
+        private const val KEY_MACROS = "macros"
     }
 }
