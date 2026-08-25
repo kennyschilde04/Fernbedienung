@@ -40,6 +40,7 @@ fun SettingsScreen(
     onExtraKeys: () -> Unit,
     onHdmiSetup: () -> Unit,
     onMacros: () -> Unit,
+    onAdb: () -> Unit,
     onForgetDevice: () -> Unit,
     onResetIdentity: () -> Unit,
     modifier: Modifier = Modifier,
@@ -98,6 +99,8 @@ fun SettingsScreen(
         OutlinedButton(onClick = onHdmiSetup, modifier = Modifier.fillMaxWidth()) { Text("HDMI-Eingang einrichten") }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onMacros, modifier = Modifier.fillMaxWidth()) { Text("Eigene Tasten (Tastenfolgen)") }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onAdb, modifier = Modifier.fillMaxWidth()) { Text("Direktzugriff (ADB)") }
 
         Spacer(Modifier.height(28.dp))
         Text("Problembehebung", style = MaterialTheme.typography.titleMedium)

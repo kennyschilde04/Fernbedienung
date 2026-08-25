@@ -19,6 +19,7 @@ installiert werden – der Dienst ist dort schon vorhanden.
   eigene Verknüpfungen können hinzugefügt werden
 - **HDMI-Eingang** mit eigenem Einrichtungs-Assistent (siehe unten)
 - **Eigene Tasten**: Tastenfolgen aufnehmen und auf Knopfdruck abspielen
+- **Direktzugriff über ADB** (optional): Bildschirme des Beamers direkt starten
 - **Weitere Tasten** (Menü, Info, Programmführer, Einstellungen, Farbtasten …) und ein Feld für
   beliebige Android-Tastencodes
 
@@ -50,7 +51,8 @@ lässt sich dann direkt auf dem Handy öffnen.
 # Ergebnis: app/build/outputs/apk/release/app-release.apk
 ```
 
-Voraussetzungen: JDK 17 und ein Android SDK (z. B. über Android Studio).
+Voraussetzungen: JDK 17 und ein Android SDK (z. B. über Android Studio). Mindestens Android 8.0
+auf dem Handy.
 Die APK ist mit dem Debug-Schlüssel signiert, damit sie ohne eigenen Keystore
 installierbar ist – für den Play Store müsste ein eigener Signaturschlüssel eingerichtet werden.
 
@@ -117,6 +119,38 @@ langsam), falls die Oberfläche des Beamers träge reagiert.
 
 Das funktioniert für alles, was sich mit dem Steuerkreuz erreichen lässt – nicht nur für HDMI.
 
+### Direktzugriff über ADB
+
+Das Fernbedienungs-Protokoll kann nur fünf Dinge: Tasten senden, einen App-Link öffnen, Text
+eintippen, Sprache übertragen, Lautstärke setzen. Es gibt keine Möglichkeit, eine bestimmte
+Activity zu starten oder die App-Liste abzufragen. Genau das fehlt, wenn ein Bildschirm – etwa der
+HDMI-Eingang – nur über die Oberfläche des Geräts erreichbar ist.
+
+Android hat dafür eine offizielle Schnittstelle: **ADB**. Die App spricht das Protokoll selbst
+(Bibliothek [`dadb`](https://github.com/mobile-dev-inc/dadb)) und braucht keinen Rechner.
+
+Einrichtung am Beamer: *Einstellungen → Geräteeinstellungen → Info →* siebenmal auf **Build**
+tippen, dann unter *Entwickleroptionen* **USB-Debugging** einschalten. Beim ersten Verbinden fragt
+der Beamer auf der Leinwand nach Bestätigung des Schlüssels.
+
+Danach unter **Einstellungen → Direktzugriff (ADB)**:
+
+- **Laufenden Bildschirm auslesen** – den HDMI-Eingang am Beamer öffnen, hier tippen: Die App
+  liest den Komponentennamen aus (`dumpsys`) und legt daraus eine Taste an, die ihn künftig direkt
+  startet (`am start -n paket/activity`).
+- **App-Liste auslesen** – alle installierten Apps; ein Tipp legt eine Starttaste an.
+- **Eigener Befehl** – beliebiger Shell-Befehl mit Ausgabe.
+
+Die angelegten Direktbefehle liegen als Tasten auf der Fernbedienung und arbeiten unabhängig von
+der Fernbedienungs-Verbindung.
+
+**Zur Sicherheit:** Solange USB-Debugging an ist, steht im WLAN ein Debug-Zugang offen. Fremde
+Schlüssel muss der Beamer zwar bestätigen, aber der Port ist erreichbar. Wer das nicht dauerhaft
+möchte, schaltet es nach dem Einrichten wieder aus – die aufgezeichneten Tastenfolgen laufen
+weiter, nur die ADB-Tasten brauchen den Zugang.
+
+Wegen ADB liegt die Mindestanforderung bei **Android 8.0**.
+
 ## Technischer Aufbau
 
 | Datei | Inhalt |
@@ -129,7 +163,8 @@ Das funktioniert für alles, was sich mit dem Steuerkreuz erreichen lässt – n
 | `net/Discovery.kt` | Gerätesuche per mDNS (`_androidtvremote2._tcp`) |
 | `RemoteViewModel.kt` | Verbindungsverwaltung inkl. automatischem Wiederverbinden |
 | `data/HdmiInputs.kt` | bekannte Passthrough-Links der Chipsatz-Familien für den HDMI-Assistenten |
-| `data/Macro.kt` | aufgezeichnete Tastenfolgen samt Speicherformat |
+| `data/Macro.kt` | aufgezeichnete Tastenfolgen und ADB-Direktbefehle samt Speicherformat |
+| `net/AdbSession.kt` | ADB über WLAN: Verbindung, Shell-Befehle, laufende Activity, App-Liste |
 | `ui/` | Oberfläche mit Jetpack Compose (Material 3) |
 
 ### Protokolltest ohne Beamer

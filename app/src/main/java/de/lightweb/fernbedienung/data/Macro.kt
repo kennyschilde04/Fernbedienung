@@ -64,3 +64,15 @@ data class Macro(
         }
     }
 }
+
+/**
+ * Direkt über ADB abgesetzter Befehl, z. B. "am start -n paket/activity".
+ * Liegt als eigene Taste auf der Fernbedienung.
+ */
+data class AdbAction(val name: String, val command: String) {
+    fun toJson(): JSONObject = JSONObject().put("name", name).put("command", command)
+
+    companion object {
+        fun fromJson(o: JSONObject): AdbAction = AdbAction(o.getString("name"), o.getString("command"))
+    }
+}

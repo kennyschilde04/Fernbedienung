@@ -45,6 +45,7 @@ import de.lightweb.fernbedienung.ui.AppsScreen
 import de.lightweb.fernbedienung.ui.ConnectScreen
 import de.lightweb.fernbedienung.ui.ExtraKeysScreen
 import de.lightweb.fernbedienung.ui.FernbedienungTheme
+import de.lightweb.fernbedienung.ui.AdbScreen
 import de.lightweb.fernbedienung.ui.HdmiScreen
 import de.lightweb.fernbedienung.ui.MacrosScreen
 import de.lightweb.fernbedienung.ui.SaveRecordingDialog
@@ -52,7 +53,7 @@ import de.lightweb.fernbedienung.ui.PairingDialog
 import de.lightweb.fernbedienung.ui.RemoteScreen
 import de.lightweb.fernbedienung.ui.SettingsScreen
 
-private enum class Screen { REMOTE, CONNECT, SETTINGS, APPS, EXTRA, HDMI, MACROS }
+private enum class Screen { REMOTE, CONNECT, SETTINGS, APPS, EXTRA, HDMI, MACROS, ADB }
 
 class MainActivity : ComponentActivity() {
 
@@ -95,7 +96,10 @@ private fun AppRoot(viewModel: RemoteViewModel) {
 
     val macros by viewModel.macros.collectAsState()
     var screen by remember { mutableStateOf(if (state.device == null) Screen.CONNECT else Screen.REMOTE) }
+    val adbActions by viewModel.adbActions.collectAsState()
     var askForName by remember { mutableStateOf(false) }
+    var foundComponent by remember { mutableStateOf<String?>(null) }
+    var packages by remember { mutableStateOf<List<String>>(emptyList()) }
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(state.message) {
@@ -127,6 +131,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                                 Screen.EXTRA -> "Weitere Tasten"
                                 Screen.HDMI -> "HDMI-Eingang"
                                 Screen.MACROS -> "Eigene Tasten"
+                                Screen.ADB -> "Direktzugriff (ADB)"
                             },
                             style = MaterialTheme.typography.titleMedium,
                         )
@@ -141,7 +146,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     if (screen != Screen.REMOTE) {
                         IconButton(onClick = {
                             screen = when (screen) {
-                                Screen.APPS, Screen.EXTRA -> Screen.SETTINGS
+                                Screen.APPS, Screen.EXTRA, Screen.ADB -> Screen.SETTINGS
                                 else -> Screen.REMOTE
                             }
                         }) {
@@ -181,7 +186,9 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     recordedCount = viewModel.recordedSteps.size,
                     onKey = viewModel::sendKey,
                     onApp = viewModel::launchApp,
+                    adbActions = adbActions,
                     onRunMacro = viewModel::runMacro,
+                    onRunAdbAction = viewModel::runAdbAction,
                     onFinishRecording = { askForName = true },
                     onCancelRecording = { viewModel.cancelRecording() },
                     onOpenHdmiSetup = { screen = Screen.HDMI },
@@ -209,6 +216,7 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     onExtraKeys = { screen = Screen.EXTRA },
                     onHdmiSetup = { screen = Screen.HDMI },
                     onMacros = { screen = Screen.MACROS },
+                    onAdb = { screen = Screen.ADB },
                     onForgetDevice = { viewModel.forgetDevice(); screen = Screen.CONNECT },
                     onResetIdentity = { viewModel.resetIdentity(); screen = Screen.CONNECT },
                 )
@@ -237,6 +245,28 @@ private fun AppRoot(viewModel: RemoteViewModel) {
                     onChangeSpeed = { macro, delay ->
                         viewModel.saveMacros(macros.map { if (it == macro) it.copy(delayMs = delay) else it })
                     },
+                )
+
+                Screen.ADB -> AdbScreen(
+                    host = viewModel.adbHost,
+                    connected = viewModel.adbConnected,
+                    busy = viewModel.adbBusy,
+                    log = viewModel.adbLog,
+                    actions = adbActions,
+                    onConnect = viewModel::adbConnect,
+                    onDisconnect = viewModel::adbDisconnect,
+                    onReadCurrentActivity = { viewModel.adbReadCurrentActivity { foundComponent = it } },
+                    onListPackages = { viewModel.adbListPackages { packages = it } },
+                    onShell = viewModel::adbShell,
+                    onRunAction = viewModel::runAdbAction,
+                    onDeleteAction = viewModel::deleteAdbAction,
+                    foundComponent = foundComponent,
+                    packages = packages,
+                    onSaveComponent = { name, command ->
+                        viewModel.addAdbAction(de.lightweb.fernbedienung.data.AdbAction(name.trim(), command))
+                        packages = emptyList()
+                    },
+                    onDismissPackages = { packages = emptyList() },
                 )
 
                 Screen.HDMI -> HdmiScreen(

@@ -117,6 +117,30 @@ class Prefs(context: Context) {
             prefs.edit().putString(KEY_MACROS, array.toString()).apply()
         }
 
+    /** Über ADB abgesetzte Befehle, die als eigene Tasten liegen. */
+    var adbActions: List<AdbAction>
+        get() {
+            val raw = prefs.getString(KEY_ADB_ACTIONS, null) ?: return emptyList()
+            return runCatching {
+                val array = JSONArray(raw)
+                (0 until array.length()).map { AdbAction.fromJson(array.getJSONObject(it)) }
+            }.getOrDefault(emptyList())
+        }
+        set(value) {
+            val array = JSONArray()
+            value.forEach { array.put(it.toJson()) }
+            prefs.edit().putString(KEY_ADB_ACTIONS, array.toString()).apply()
+        }
+
+    /** Zuletzt benutzte ADB-Adresse, meist dieselbe wie die des Beamers. */
+    var adbHost: String?
+        get() = prefs.getString(KEY_ADB_HOST, null)
+        set(value) {
+            val editor = prefs.edit()
+            if (value.isNullOrBlank()) editor.remove(KEY_ADB_HOST) else editor.putString(KEY_ADB_HOST, value)
+            editor.apply()
+        }
+
     private fun defaultClientName(): String {
         val model = Build.MODEL?.takeIf { it.isNotBlank() } ?: "Handy"
         return "Fernbedienung ($model)"
@@ -133,5 +157,7 @@ class Prefs(context: Context) {
         private const val KEY_APPS = "apps"
         private const val KEY_HDMI_LINK = "hdmi_link"
         private const val KEY_MACROS = "macros"
+        private const val KEY_ADB_ACTIONS = "adb_actions"
+        private const val KEY_ADB_HOST = "adb_host"
     }
 }

@@ -10,7 +10,8 @@ android {
 
     defaultConfig {
         applicationId = "de.lightweb.fernbedienung"
-        minSdk = 24
+        // dadb (ADB-Client) benutzt java.nio.file - ab Android 8 ohne Klimmzuege verfuegbar.
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -69,4 +70,7 @@ dependencies {
 
     implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
+
+    // ADB ueber WLAN, um tiefer ins System des Beamers zu greifen
+    implementation("dev.mobile:dadb:2.0.0")
 }

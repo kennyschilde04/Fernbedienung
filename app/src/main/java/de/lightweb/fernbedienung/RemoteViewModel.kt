@@ -5,10 +5,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.lightweb.fernbedienung.data.AppShortcut
+import de.lightweb.fernbedienung.data.AdbAction
 import de.lightweb.fernbedienung.data.Device
 import de.lightweb.fernbedienung.data.KeyCodes
 import de.lightweb.fernbedienung.data.Macro
 import de.lightweb.fernbedienung.data.Prefs
+import de.lightweb.fernbedienung.net.AdbSession
 import de.lightweb.fernbedienung.net.ClientIdentity
 import de.lightweb.fernbedienung.net.Discovery
 import de.lightweb.fernbedienung.net.PairingException
@@ -55,6 +57,22 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _apps = MutableStateFlow(prefs.apps)
     val apps: StateFlow<List<AppShortcut>> = _apps.asStateFlow()
+
+    private val _adbActions = MutableStateFlow(prefs.adbActions)
+    val adbActions: StateFlow<List<AdbAction>> = _adbActions.asStateFlow()
+
+    private val adbSession by lazy { AdbSession(getApplication<Application>()) }
+    private val adbConnectedState = mutableStateOf(false)
+    private val adbBusyState = mutableStateOf(false)
+    private val adbLogState = mutableStateOf("")
+
+    val adbConnected: Boolean get() = adbConnectedState.value
+    val adbBusy: Boolean get() = adbBusyState.value
+    val adbLog: String get() = adbLogState.value
+
+    var adbHost: String
+        get() = prefs.adbHost ?: prefs.device?.host.orEmpty()
+        set(value) { prefs.adbHost = value }
 
     private val _macros = MutableStateFlow(prefs.macros)
     val macros: StateFlow<List<Macro>> = _macros.asStateFlow()
@@ -357,6 +375,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     /** Spielt eine aufgezeichnete Folge ab. */
     fun runMacro(macro: Macro) {
         macroJob?.cancel()
+        runCatching { adbSession.close() }
         macroJob = viewModelScope.launch(Dispatchers.IO) {
             for (step in macro.steps) {
                 val current = client ?: break
@@ -370,6 +389,81 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    // -------------------------------------------------------------------- ADB
+
+    private fun adbLog(text: String) {
+        adbLogState.value = text
+    }
+
+    /** Führt etwas über ADB aus und hält Status und Ausgabe fest. */
+    private fun adbRun(description: String, block: (AdbSession) -> String?) {
+        if (adbBusyState.value) return
+        adbBusyState.value = true
+        adbLog("$description …")
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = runCatching { block(adbSession) }
+            adbConnectedState.value = adbSession.isConnected
+            adbBusyState.value = false
+            result
+                .onSuccess { output -> adbLog(output?.ifBlank { "$description: erledigt." } ?: "$description: erledigt.") }
+                .onFailure { t -> adbLog(t.message ?: "Fehlgeschlagen: $description") }
+        }
+    }
+
+    fun adbConnect(host: String) {
+        prefs.adbHost = host
+        adbRun("Verbinde mit $host") { session ->
+            session.connect(host)
+            "Verbunden. Der Beamer hat den Schlüssel akzeptiert."
+        }
+    }
+
+    fun adbDisconnect() {
+        adbSession.close()
+        adbConnectedState.value = false
+        adbLog("Verbindung getrennt.")
+    }
+
+    /** Liest aus, was gerade auf dem Beamer im Vordergrund läuft. */
+    fun adbReadCurrentActivity(onFound: (String) -> Unit) {
+        adbRun("Lese den laufenden Bildschirm aus") { session ->
+            val component = session.currentActivity()
+                ?: throw de.lightweb.fernbedienung.net.AdbException(
+                    "Konnte nichts erkennen. Ist auf dem Beamer der gewünschte Bildschirm offen?",
+                )
+            onFound(component)
+            "Gefunden: $component"
+        }
+    }
+
+    fun adbListPackages(onResult: (List<String>) -> Unit) {
+        adbRun("Lese die App-Liste") { session ->
+            val list = session.packages()
+            onResult(list)
+            "${list.size} Apps gefunden."
+        }
+    }
+
+    fun adbShell(command: String) {
+        adbRun("Führe aus: $command") { session -> session.shell(command) }
+    }
+
+    fun runAdbAction(action: AdbAction) {
+        adbRun(action.name) { session ->
+            if (!session.isConnected) session.connect(adbHost)
+            session.shell(action.command)
+        }
+    }
+
+    fun saveAdbActions(list: List<AdbAction>) {
+        prefs.adbActions = list
+        _adbActions.value = list
+    }
+
+    fun addAdbAction(action: AdbAction) = saveAdbActions(_adbActions.value.filterNot { it.name == action.name } + action)
+
+    fun deleteAdbAction(action: AdbAction) = saveAdbActions(_adbActions.value - action)
 
     // ----------------------------------------------------------------- Apps
 
@@ -390,6 +484,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     override fun onCleared() {
         super.onCleared()
         macroJob?.cancel()
+        runCatching { adbSession.close() }
         closeClient()
         closePairing()
     }

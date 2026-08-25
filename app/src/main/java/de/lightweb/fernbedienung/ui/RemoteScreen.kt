@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import de.lightweb.fernbedienung.Status
 import de.lightweb.fernbedienung.UiState
 import de.lightweb.fernbedienung.data.AppShortcut
+import de.lightweb.fernbedienung.data.AdbAction
 import de.lightweb.fernbedienung.data.KeyCodes
 import de.lightweb.fernbedienung.data.Macro
 
@@ -59,11 +60,13 @@ fun RemoteScreen(
     haptic: Boolean,
     hdmiLink: String?,
     macros: List<Macro>,
+    adbActions: List<AdbAction>,
     recording: Boolean,
     recordedCount: Int,
     onKey: (Int) -> Unit,
     onApp: (String) -> Unit,
     onRunMacro: (Macro) -> Unit,
+    onRunAdbAction: (AdbAction) -> Unit,
     onFinishRecording: () -> Unit,
     onCancelRecording: () -> Unit,
     onOpenHdmiSetup: () -> Unit,
@@ -297,6 +300,16 @@ fun RemoteScreen(
                     haptic = haptic,
                     color = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            adbActions.forEach { action ->
+                // Direktbefehle brauchen keine stehende Fernbedienungs-Verbindung
+                TextKey(
+                    label = action.name,
+                    onClick = { onRunAdbAction(action) },
+                    haptic = haptic,
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
             }
             TextKey(
