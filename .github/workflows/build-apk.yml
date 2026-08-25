@@ -3,6 +3,7 @@ name: APK bauen
 on:
   push:
     branches: ["**"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
