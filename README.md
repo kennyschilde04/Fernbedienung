@@ -31,11 +31,16 @@ Die APK wird von GitHub Actions gebaut:
 4. `beamer-fernbedienung.apk` auf das Handy kopieren und installieren
    (Android fragt dabei nach der Erlaubnis, Apps aus unbekannten Quellen zu installieren)
 
-Alternativ mit einem Tag ein Release erzeugen – die APK hängt dann direkt am Release:
+Bequemer fürs Handy ist ein Release mit Direktlink. Dafür einen Versions-Tag setzen:
 
 ```bash
 git tag v1.0 && git push origin v1.0
 ```
+
+Oder auf GitHub unter **Releases → Draft a new release**: bei „Choose a tag“ `v1.0`
+eintippen, „Create new tag on publish“ wählen, als Target den Branch setzen und
+veröffentlichen. Der Workflow baut die APK und hängt sie an das Release – der Link
+lässt sich dann direkt auf dem Handy öffnen.
 
 ## Selbst bauen
 
